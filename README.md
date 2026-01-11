@@ -16,7 +16,11 @@ A sleek, minimal Flutter app that lets you play Spotify tracks by scanning QR co
 - **Spotify App** (installed and logged in on the device)
 - **Linux Build Tools** (if running on Linux):
   ```bash
-  sudo apt-get install ninja-build pkg-config  # Debian/Ubuntu
+  # Debian/Ubuntu
+  sudo apt-get install ninja-build pkg-config libgtk-3-dev
+  
+  # Arch/Manjaro
+  sudo pacman -S ninja pkgconf base-devel gtk3
   ```
 
 ### Configuration
