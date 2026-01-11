@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -97,38 +97,26 @@ class QRMusicPlayerHomeState extends State<QRMusicPlayerHome> {
   }
 }
 
-class QRScanPage extends StatefulWidget {
+class QRScanPage extends StatelessWidget {
   final Function(String) onResult;
   const QRScanPage({super.key, required this.onResult});
-  @override
-  State<QRScanPage> createState() => _QRScanPageState();
-}
-
-class _QRScanPageState extends State<QRScanPage> {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  QRViewController? controller;
-  bool scanned = false;
-  void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
-    controller.scannedDataStream.listen((scanData) async {
-      if (scanned) return;
-      scanned = true;
-      controller.pauseCamera();
-      widget.onResult(scanData.code!);
-      Navigator.pop(context);
-    });
-  }
-
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: QRView(key: qrKey, onQRViewCreated: _onQRViewCreated),
+      appBar: AppBar(title: const Text('Scan QR Code')),
+      body: MobileScanner(
+        onDetect: (capture) {
+          final List<Barcode> barcodes = capture.barcodes;
+          for (final barcode in barcodes) {
+             if (barcode.rawValue != null) {
+               onResult(barcode.rawValue!);
+               Navigator.pop(context);
+               break; 
+             }
+          }
+        },
+      ),
     );
   }
 }
