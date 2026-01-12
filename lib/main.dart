@@ -1,36 +1,46 @@
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() => runApp(const HitsterLiteApp());
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
+  runApp(const QRMusicPlayerApp());
+}
 
-class HitsterLiteApp extends StatelessWidget {
-  const HitsterLiteApp({super.key});
+class QRMusicPlayerApp extends StatelessWidget {
+  const QRMusicPlayerApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Hitster Lite',
+      title: 'QR Music Player',
       theme: ThemeData.dark(),
-      home: const HitsterHome(),
+      home: const QRMusicPlayerHome(),
     );
   }
 }
 
-class HitsterHome extends StatefulWidget {
-  const HitsterHome({super.key});
+class QRMusicPlayerHome extends StatefulWidget {
+  const QRMusicPlayerHome({super.key});
   @override
-  State<HitsterHome> createState() => HitsterHomeState();
+  State<QRMusicPlayerHome> createState() => QRMusicPlayerHomeState();
 }
 
-class HitsterHomeState extends State<HitsterHome> {
+class QRMusicPlayerHomeState extends State<QRMusicPlayerHome> {
   bool _connected = false;
   bool _playing = false;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   Future<void> _connectToSpotify() async {
     try {
+      await SpotifySdk.getAccessToken(
+        clientId: dotenv.env['SPOTIFY_CLIENT_ID']!,
+        redirectUrl: dotenv.env['SPOTIFY_REDIRECT_URL']!,
+        scope:
+            'app-remote-control,user-modify-playback-state,playlist-read-private',
+      );
       await SpotifySdk.connectToSpotifyRemote(
-        clientId: 'YOUR_SPOTIFY_CLIENT_ID',
-        redirectUrl: 'yourapp://spotify-login',
+        clientId: dotenv.env['SPOTIFY_CLIENT_ID']!,
+        redirectUrl: dotenv.env['SPOTIFY_REDIRECT_URL']!,
       );
       setState(() => _connected = true);
     } catch (e) {
@@ -65,7 +75,7 @@ class HitsterHomeState extends State<HitsterHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Hitster Custom')),
+      appBar: AppBar(title: const Text('QR Music Player')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -93,38 +103,26 @@ class HitsterHomeState extends State<HitsterHome> {
   }
 }
 
-class QRScanPage extends StatefulWidget {
+class QRScanPage extends StatelessWidget {
   final Function(String) onResult;
   const QRScanPage({super.key, required this.onResult});
-  @override
-  State<QRScanPage> createState() => _QRScanPageState();
-}
-
-class _QRScanPageState extends State<QRScanPage> {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  QRViewController? controller;
-  bool scanned = false;
-  void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
-    controller.scannedDataStream.listen((scanData) async {
-      if (scanned) return;
-      scanned = true;
-      controller.pauseCamera();
-      widget.onResult(scanData.code!);
-      Navigator.pop(context);
-    });
-  }
-
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: QRView(key: qrKey, onQRViewCreated: _onQRViewCreated),
+      appBar: AppBar(title: const Text('Scan QR Code')),
+      body: MobileScanner(
+        onDetect: (capture) {
+          final List<Barcode> barcodes = capture.barcodes;
+          for (final barcode in barcodes) {
+            if (barcode.rawValue != null) {
+              onResult(barcode.rawValue!);
+              Navigator.pop(context);
+              break;
+            }
+          }
+        },
+      ),
     );
   }
 }
