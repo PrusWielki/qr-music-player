@@ -49,16 +49,30 @@ for item in items:
         release_date = track["album"]["release_date"]
         # Handle year-only or incomplete dates
         year = int(release_date[:4])
+        
+        # Get all artists
+        authors = ", ".join([artist["name"] for artist in track["artists"]])
+        
+        # Get Spotify link
+        link = track["external_urls"].get("spotify", "")
+        
         tracks.append({
-            "track": track["name"],
-            "artist": track["artists"][0]["name"],
-            "year": year
+            "year": year,
+            "Song Name": track["name"],
+            "Authors": authors,
+            "Album": track["album"]["name"],
+            "Link": link
         })
 
 # --- CREATE DATAFRAME ---
 df = pd.DataFrame(tracks)
 df["decade"] = (df["year"] // 10) * 10
 df = df.sort_values("year")
+
+# Save to CSV
+csv_columns = ["year", "Song Name", "Authors", "Album", "Link"]
+df[csv_columns].to_csv("playlist_tracks.csv", index=False)
+print("Data saved to playlist_tracks.csv")
 
 # --- PLOT HISTOGRAM ---
 plt.figure(figsize=(15, 12))
