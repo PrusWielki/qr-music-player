@@ -7,6 +7,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import os
 import sys
 from dotenv import load_dotenv
+from collections import Counter
 
 load_dotenv()
 
@@ -35,6 +36,8 @@ except spotipy.exceptions.SpotifyException as e:
 
 # --- EXTRACT SONGS AND YEARS ---
 tracks = []
+unique_artist_ids = set()
+
 items = results['items']
 while results['next']:
     results = sp.next(results)
@@ -50,9 +53,16 @@ for item in items:
         # Handle year-only or incomplete dates
         year = int(release_date[:4])
         
-        # Get all artists
-        authors = ", ".join([artist["name"] for artist in track["artists"]])
+        # Get all artists details
+        artist_names = [artist["name"] for artist in track["artists"]]
+        authors = ", ".join(artist_names)
         
+        current_track_artist_ids = []
+        for artist in track["artists"]:
+            if artist.get("id"):
+                current_track_artist_ids.append(artist["id"])
+                unique_artist_ids.add(artist["id"])
+
         # Get Spotify link
         link = track["external_urls"].get("spotify", "")
         
@@ -61,8 +71,36 @@ for item in items:
             "Song Name": track["name"],
             "Authors": authors,
             "Album": track["album"]["name"],
-            "Link": link
+            "Link": link,
+            "artist_names_list": artist_names,
+            "artist_ids": current_track_artist_ids
         })
+
+# --- FETCH GENRES ---
+print(f"Fetching details for {len(unique_artist_ids)} artists...")
+artist_genres_map = {}
+unique_artist_ids_list = list(unique_artist_ids)
+
+# Spotify API allows max 50 artists per request
+for i in range(0, len(unique_artist_ids_list), 50):
+    chunk = unique_artist_ids_list[i:i+50]
+    try:
+        artists_info = sp.artists(chunk)
+        for artist in artists_info["artists"]:
+            if artist:
+                artist_genres_map[artist["id"]] = artist["genres"]
+    except Exception as e:
+        print(f"Error fetching artists chunk: {e}")
+
+# --- AGGREGATE STATS ---
+all_genres = []
+all_artists = []
+
+for t in tracks:
+    all_artists.extend(t["artist_names_list"])
+    for aid in t["artist_ids"]:
+        genres = artist_genres_map.get(aid, [])
+        all_genres.extend(genres)
 
 # --- CREATE DATAFRAME ---
 df = pd.DataFrame(tracks)
@@ -75,32 +113,50 @@ df[csv_columns].to_csv("playlist_tracks.csv", index=False)
 print("Data saved to playlist_tracks.csv")
 
 # --- PLOT HISTOGRAM ---
-plt.figure(figsize=(15, 12))
+plt.figure(figsize=(20, 20))
 total_songs = len(df)
-plt.suptitle(f"Spotify Playlist Analysis (Total Songs: {total_songs})", fontsize=20)
+plt.suptitle(f"Spotify Playlist Analysis (Total Songs: {total_songs})", fontsize=24)
 sns.set_style("whitegrid")
+
 min_year = int(df["year"].min())
 max_year = int(df["year"].max())
 
 # --- SUBPLOT 1: YEARS ---
-plt.subplot(2, 1, 1)
+plt.subplot(4, 1, 1)
 # discrete=True centers bars on integers. shrink=0.9 gives a small gap between bars.
 sns.histplot(data=df, x="year", discrete=True, color="green", shrink=0.9)
-
-plt.title("Spotify Playlist – Songs by Release Year")
+plt.title("Songs by Release Year")
 plt.xlabel("Year")
-plt.ylabel("Number of Songs")
-
-# Show every year on x-axis and rotate labels
+plt.ylabel("Count")
 plt.xticks(ticks=range(min_year, max_year + 1), rotation=90)
 
 # --- SUBPLOT 2: DECADES ---
-plt.subplot(2, 1, 2)
+plt.subplot(4, 1, 2)
 sns.countplot(data=df, x="decade", color="skyblue")
-plt.title("Spotify Playlist – Songs by Decade")
+plt.title("Songs by Decade")
 plt.xlabel("Decade")
-plt.ylabel("Number of Songs")
+plt.ylabel("Count")
 
-plt.tight_layout()
-plt.savefig("playlist_years.png")
-print("Plot saved to playlist_years.png")
+# --- SUBPLOT 3: TOP GENRES ---
+plt.subplot(4, 1, 3)
+genre_counts = Counter(all_genres).most_common(15)
+if genre_counts:
+    genres_df = pd.DataFrame(genre_counts, columns=["Genre", "Count"])
+    sns.barplot(data=genres_df, x="Count", y="Genre", palette="viridis")
+    plt.title("Top 15 Genres")
+else:
+    plt.text(0.5, 0.5, "No Genre Data Available", ha='center')
+
+# --- SUBPLOT 4: TOP ARTISTS ---
+plt.subplot(4, 1, 4)
+artist_counts = Counter(all_artists).most_common(15)
+if artist_counts:
+    artists_df = pd.DataFrame(artist_counts, columns=["Artist", "Count"])
+    sns.barplot(data=artists_df, x="Count", y="Artist", palette="magma")
+    plt.title("Top 15 Artists")
+else:
+    plt.text(0.5, 0.5, "No Artist Data Available", ha='center')
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to make room for suptitle
+plt.savefig("playlist_analysis.png")
+print("Plot saved to playlist_analysis.png")
