@@ -1,3 +1,11 @@
+# Python
+/playlist_analysis/__pycache__/
+/playlist_analysis/*.pyc
+/playlist_analysis/*.pyo
+/playlist_analysis/.venv
+/playlist_analysis/.cache
+
+
 # Miscellaneous
 *.class
 *.log
