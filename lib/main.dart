@@ -32,6 +32,12 @@ class QRMusicPlayerHomeState extends State<QRMusicPlayerHome> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   Future<void> _connectToSpotify() async {
     try {
+      await SpotifySdk.getAccessToken(
+        clientId: dotenv.env['SPOTIFY_CLIENT_ID']!,
+        redirectUrl: dotenv.env['SPOTIFY_REDIRECT_URL']!,
+        scope:
+            'app-remote-control,user-modify-playback-state,playlist-read-private',
+      );
       await SpotifySdk.connectToSpotifyRemote(
         clientId: dotenv.env['SPOTIFY_CLIENT_ID']!,
         redirectUrl: dotenv.env['SPOTIFY_REDIRECT_URL']!,
