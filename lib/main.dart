@@ -63,6 +63,21 @@ class QRMusicPlayerHomeState extends State<QRMusicPlayerHome> {
   }
 
   Future<void> _playTrack(String url) async {
+    if (!url.contains('open.spotify.com')) {
+      if (mounted) {
+        showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+                title: const Text('Invalid QR Code'),
+                content: Text('The scanned QR code is not a valid Spotify link:\n\n$url'),
+                actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+                ],
+            ),
+        );
+      }
+      return;
+    }
     try {
       final trackId = Uri.parse(url).pathSegments.last;
       final spotifyUri = 'spotify:track:$trackId';
