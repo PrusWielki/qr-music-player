@@ -29,9 +29,11 @@ class QRMusicPlayerHome extends StatefulWidget {
 class QRMusicPlayerHomeState extends State<QRMusicPlayerHome> {
   bool _connected = false;
   bool _playing = false;
+  bool _isLoading = false;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
 
   Future<void> _connectToSpotify() async {
+    setState(() => _isLoading = true);
     try {
       await SpotifySdk.getAccessToken(
         clientId: dotenv.env['SPOTIFY_CLIENT_ID']!,
@@ -43,12 +45,20 @@ class QRMusicPlayerHomeState extends State<QRMusicPlayerHome> {
         clientId: dotenv.env['SPOTIFY_CLIENT_ID']!,
         redirectUrl: dotenv.env['SPOTIFY_REDIRECT_URL']!,
       );
-      setState(() => _connected = true);
+      if (mounted) {
+        setState(() => _connected = true);
+      }
     } catch (e) {
       debugPrint('Error connecting: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error connecting: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error connecting: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -118,27 +128,31 @@ class QRMusicPlayerHomeState extends State<QRMusicPlayerHome> {
                 if (!_connected)
                   Padding(
                     padding: const EdgeInsets.all(20.0),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(
-                          0xFF1DB954,
-                        ), // Spotify Green
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      onPressed: _connectToSpotify,
-                      icon: const Icon(Icons.login, size: 28),
-                      label: const Text(
-                        'Connect to Spotify',
-                        style: TextStyle(fontSize: 20),
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(
+                            color: Color(0xFF1DB954),
+                          )
+                        : ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(
+                                0xFF1DB954,
+                              ), // Spotify Green
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            onPressed: _connectToSpotify,
+                            icon: const Icon(Icons.login, size: 28),
+                            label: const Text(
+                              'Connect to Spotify',
+                              style: TextStyle(fontSize: 20),
+                            ),
+                          ),
                   )
                 else ...[
                   // Main Action: Scan
