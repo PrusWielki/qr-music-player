@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Playlist Analysis</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script>
+        window.ENV = {
+            SPOTIFY_CLIENT_ID: '__SPOTIFY_CLIENT_ID__'
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        
+        <section id="loading-section">
+            <div class="loader"></div>
+            <p id="loading-text">Connecting to Spotify...</p>
+        </section>
+
+        <section id="results-section" class="hidden">
+            <div class="chart-container">
+                <div id="year-chart"></div>
+            </div>
+            
+            <div class="chart-container">
+                <div id="decade-chart"></div>
+            </div>
+
+            <div id="songs-table-container" class="chart-container">
+            </div>
+        </section>
+        
+    </div>
+    <script src="script.js?v=6"></script>
+</body>
+</html>

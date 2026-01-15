@@ -6,12 +6,13 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build App
     runs-on: macos-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout code
@@ -29,16 +30,29 @@ jobs:
           channel: "stable"
 
       - name: Create .env file
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_REDIRECT_URL: ${{ secrets.SPOTIFY_REDIRECT_URL }}
         run: |
-          echo "SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}" >> .env
-          echo "SPOTIFY_REDIRECT_URL=${{ secrets.SPOTIFY_REDIRECT_URL }}" >> .env
+          if [ -n "$SPOTIFY_CLIENT_ID" ]; then
+            echo "SPOTIFY_CLIENT_ID=$SPOTIFY_CLIENT_ID" >> .env
+            echo "SPOTIFY_REDIRECT_URL=$SPOTIFY_REDIRECT_URL" >> .env
+          else
+            echo "Warning: Secrets not found, skipping .env creation"
+          fi
 
       - name: Get Dependencies
         run: flutter pub get
 
-      # --- Android Build ---
-      - name: Build Android APK
-        run: flutter build apk --release
+      # - name: Build Android APK
+      #   env:
+      #     KEY_ALIAS: ${{ secrets.KeyAlias }}
+      #     KEY_PASSWORD: ${{ secrets.KeyPassword }}
+      #     STORE_PASSWORD: ${{ secrets.StorePassword }}
+      #     KEYSTORE_PATH: android/app/upload-keystore.jks
+      #   run: |
+      #     echo "${{ secrets.ReviewKeystore }}" | base64 --decode > android/app/upload-keystore.jks
+      #     flutter build apk --release
 
       # --- iOS Build (Unsigned) ---
       - name: Build iOS App (Unsigned)
@@ -53,7 +67,6 @@ jobs:
       # --- Rename for Clarity ---
       - name: Rename Artifacts
         run: |
-          mv build/app/outputs/flutter-apk/app-release.apk ./qr-music-player-android.apk
           mv build/ios/iphoneos/Runner.ipa ./qr-music-player-ios-unsigned.ipa
 
       # --- Create Release ---
@@ -62,5 +75,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            qr-music-player-android.apk
             qr-music-player-ios-unsigned.ipa
